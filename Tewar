@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 ربات تریدر Inner Circle</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            font-family: Tahoma, Arial, sans-serif; 
+            direction: rtl; 
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0f172a, #581c87, #0f172a);
+            color: white;
+        }
+        * { box-sizing: border-box; }
+        .loading { text-align: center; padding: 50px; color: white; }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="loading">⏳ در حال بارگذاری ربات تریدر...</div>
+    </div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+        
+        const TradingBot = () => {
+            const [userType, setUserType] = useState(null);
+            const [userCode, setUserCode] = useState('');
+            const [loginAttempts, setLoginAttempts] = useState(0);
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [currentTrade, setCurrentTrade] = useState(null);
+            const [signals, setSignals] = useState([]);
+            const [marketData, setMarketData] = useState([]);
+            const [totalProfit] = useState(2172.79);
+
+            // کدهای دسترسی
+            const ACCESS_CODES = {
+                'INNER-PRO-2024': 'premium',
+                'INNER-VIP-9999': 'premium', 
+                'TRADE-GOLD-7777': 'premium',
+                'INNER-FREE-1000': 'free'
+            };
+
+            // استراتژی‌های معاملاتی
+            const tradingStrategies = {
+                boxBreakout: { name: 'شکست باکس رنج', successRate: 75, avgProfit: 22.5 },
+                supportResistance: { name: 'حمایت و مقاومت', successRate: 68, avgProfit: 18.3 },
+                trendLine: { name: 'شکست خط روند', successRate: 72, avgProfit: 20.1 },
+                vPattern: { name: 'پترن V', successRate: 80, avgProfit: 35.2 },
+                fibonacci: { name: 'فیبوناچی', successRate: 65, avgProfit: 16.8 }
+            };
+
+            // ورود کاربر
+            const handleLogin = () => {
+                if (loginAttempts >= 3) {
+                    alert('تعداد تلاش‌های شما به حد مجاز رسیده است.');
+                    return;
+                }
+
+                const accessType = ACCESS_CODES[userCode.toUpperCase()];
+                if (accessType) {
+                    setUserType(accessType);
+                    setIsAuthenticated(true);
+                    setLoginAttempts(0);
+                } else {
+                    setLoginAttempts(prev => prev + 1);
+                    alert(`کد نامعتبر. تلاش ${loginAttempts + 1} از 3`);
+                    setUserCode('');
+                }
+            };
+
+            // تولید داده‌های نمونه
+            useEffect(() => {
+                if (!isAuthenticated) return;
+
+                const generateData = () => {
+                    // داده‌های نمودار
+                    const chartData = [];
+                    let price = 50000;
+                    for (let i = 0; i < 24; i++) {
+                        price += (Math.random() - 0.5) * 1000;
+                        chartData.push({
+                            time: `${i}:00`,
+                            price: Math.max(price, 30000)
+                        });
+                    }
+                    setMarketData(chartData);
+
+                    // تولید سیگنال‌ها
+                    const pairs = userType === 'premium' 
+                        ? ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'BNBUSDT', 'XRPUSDT', 'SOLUSDT']
+                        : ['BTCUSDT', 'ETHUSDT'];
+                    
+                    const newSignals = [];
+                    const signalCount = userType === 'premium' ? 4 : 1;
+                    
+                    for (let i = 0; i < signalCount; i++) {
+                        const pair = pairs[Math.floor(Math.random() * pairs.length)];
+                        const strategies = Object.keys(tradingStrategies);
+                        const strategy = strategies[Math.floor(Math.random() * strategies.length)];
+                        const side = Math.random() > 0.5 ? 'LONG' : 'SHORT';
+                        const entry = 50 + Math.random() * 100;
+                        
+                        newSignals.push({
+                            pair,
+                            signal: side,
+                            strategy,
+                            entry: entry,
+                            target: side === 'LONG' ? entry * 1.15 : entry * 0.85,
+                            stopLoss: side === 'LONG' ? entry * 0.95 : entry * 1.05,
+                            confidence: (userType === 'premium' ? 80 : 65) + Math.floor(Math.random() * 15),
+                            isPremium: userType === 'premium'
+                        });
+                    }
+                    setSignals(newSignals);
+                };
+
+                generateData();
+                const interval = setInterval(generateData, userType === 'premium' ? 20000 : 60000);
+                return () => clearInterval(interval);
+            }, [isAuthenticated, userType]);
+
+            const executePosition = (signal) => {
+                setCurrentTrade({
+                    ...signal,
+                    id: Date.now(),
+                    timestamp: new Date().toLocaleString('fa-IR'),
+                    status: 'active'
+                });
+                alert(`پوزیشن ${signal.pair} ${signal.signal} اجرا شد! 🚀`);
+            };
+
+            // صفحه ورود
+            if (!isAuthenticated) {
+                return (
+                    <div style={{
+                        minHeight: '100vh',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px'
+                    }}>
+                        <div style={{
+                            background: 'rgba(30, 41, 59, 0.9)',
+                            borderRadius: '12px',
+                            padding: '40px',
+                            maxWidth: '450px',
+                            width: '100%',
+                            textAlign: 'center',
+                            border: '1px solid rgba(71, 85, 105, 0.5)',
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
+                        }}>
+                            <h1 style={{
+                                fontSize: '28px',
+                                fontWeight: 'bold',
+                                background: 'linear-gradient(45deg, #60A5FA, #A78BFA)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                marginBottom: '10px'
+                            }}>
+                                🤖 ربات تریدر Inner Circle
+                            </h1>
+                            <p style={{color: '#D1D5DB', marginBottom: '30px', fontSize: '14px'}}>
+                                برای ورود کد دسترسی خود را وارد کنید
+                            </p>
+                            
+                            <input
+                                type="text"
+                                placeholder="کد دسترسی"
+                                value={userCode}
+                                onChange={(e) => setUserCode(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                                style={{
+                                    width: '100%',
+                                    padding: '15px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #374151',
+                                    background: '#374151',
+                                    color: 'white',
+                                    textAlign: 'center',
+                                    fontSize: '16px',
+                                    fontFamily: 'monospace',
+                                    letterSpacing: '2px',
+                                    marginBottom: '20px',
+                                    outline: 'none'
+                                }}
+                            />
+                            
+                            <button
+                                onClick={handleLogin}
+                                style={{
+                                    width: '100%',
+                                    padding: '15px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'linear-gradient(45deg, #7C3AED, #2563EB)',
+                                    color: 'white',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s'
+                                }}
+                            >
+                                ورود به ربات
+                            </button>
+
+                            <div style={{marginTop: '30px', padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px'}}>
+                                <div style={{marginBottom: '15px'}}>
+                                    <h3 style={{color: '#10B981', margin: '0 0 8px 0', fontSize: '16px'}}>🆓 حساب رایگان</h3>
+                                    <p style={{fontSize: '12px', color: '#9CA3AF', margin: '0 0 5px 0'}}>کد: <strong style={{color: '#10B981'}}>INNER-FREE-1000</strong></p>
+                                    <ul style={{fontSize: '11px', color: '#9CA3AF', textAlign: 'right', margin: 0, padding: '0 0 0 20px'}}>
+                                        <li>1-2 سیگنال در روز</li>
+                                        <li>بروزرسانی هر دقیقه</li>
+                                        <li>نرخ موفقیت 65-75%</li>
+                                    </ul>
+                                </div>
+                                
+                                <div>
+                                    <h3 style={{color: '#F59E0B', margin: '0 0 8px 0', fontSize: '16px'}}>👑 حساب پریمیوم</h3>
+                                    <p style={{fontSize: '12px', color: '#9CA3AF', margin: '0 0 5px 0'}}>کد: <strong style={{color: '#F59E0B'}}>INNER-PRO-2024</strong></p>
+                                    <ul style={{fontSize: '11px', color: '#9CA3AF', textAlign: 'right', margin: 0, padding: '0 0 0 20px'}}>
+                                        <li>4-6 سیگنال دقیق در روز</li>
+                                        <li>بروزرسانی هر 20 ثانیه</li>
+                                        <li>نرخ موفقیت 80-95%</li>
+                                        <li>تحلیل پیشرفته بازار</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // صفحه اصلی ربات
+            return (
+                <div style={{minHeight: '100vh', padding: '15px'}}>
+                    {/* هدر */}
+                    <div style={{marginBottom: '25px'}}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '15px',
+                            marginBottom: '20px'
+                        }}>
+                            <div>
+                                <h1 style={{
+                                    fontSize: 'clamp(20px, 4vw, 32px)',
+                                    fontWeight: 'bold',
+                                    background: 'linear-gradient(45deg, #60A5FA, #A78BFA)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    margin: '0 0 10px 0'
+                                }}>
+                                    🤖 ربات تریدر Inner Circle
+                                </h1>
+                                <div style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '4px 10px',
+                                    borderRadius: '15px',
+                                    background: userType === 'premium' 
+                                        ? 'linear-gradient(45deg, #D97706, #EA580C)' 
+                                        : '#059669',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                }}>
+                                    {userType === 'premium' ? '👑' : '👤'}
+                                    {userType === 'premium' ? 'حساب پریمیوم' : 'حساب رایگان'}
+                                </div>
+                            </div>
+                            
+                            <div style={{textAlign: 'center'}}>
+                                <p style={{margin: '0', fontSize: '11px', color: '#9CA3AF'}}>مجموع سود</p>
+                                <p style={{margin: '3px 0', fontSize: '20px', fontWeight: 'bold', color: '#10B981'}}>
+                                    +{totalProfit.toFixed(2)}%
+                                </p>
+                                <button
+                                    onClick={() => setIsAuthenticated(false)}
+                                    style={{
+                                        padding: '6px 12px',
+                                        borderRadius: '6px',
+                                        border: 'none',
+                                        background: '#DC2626',
+                                        color: 'white',
+                                        fontSize: '11px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    خروج
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* آمار کلی */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                        gap: '10px',
+                        marginBottom: '20px'
+                    }}>
+                        {[
+                            {icon: '📊', label: 'تحلیل‌ها', value: userType === 'premium' ? '162' : '48'},
+                            {icon: '📈', label: 'روند', value: 'صعودی'},
+                            {icon: '⚡', label: 'نوسان', value: '68%'},
+                            {icon: '🎯', label: 'دقت', value: userType === 'premium' ? '85%' : '72%'}
+                        ].map((item, i) => (
+                            <div key={i} style={{
+                                background: 'rgba(30, 41, 59, 0.6)',
+                                borderRadius: '8px',
+                                padding: '12px 8px',
+                                textAlign: 'center',
+                                border: '1px solid rgba(71, 85, 105, 0.3)'
+                            }}>
+                                <div style={{fontSize: '18px', marginBottom: '4px'}}>{item.icon}</div>
+                                <div style={{fontSize: '10px', color: '#9CA3AF', marginBottom: '2px'}}>{item.label}</div>
+                                <div style={{fontSize: '14px', fontWeight: 'bold'}}>{item.value}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* سیگنال‌ها */}
+                    <div style={{
+                        background: 'rgba(30, 41, 59, 0.6)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '1px solid rgba(71, 85, 105, 0.3)',
+                        marginBottom: '20px'
+                    }}>
+                        <h2 style={{
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            marginBottom: '15px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            ⚠️ سیگنال‌های فعال ({signals.length})
+                            {userType === 'premium' ? '👑' : '🔒'}
+                        </h2>
+                        
+                        <div style={{display: 'grid', gap: '12px'}}>
+                            {signals.map((signal, index) => (
+                                <div key={index} style={{
+                                    background: signal.isPremium 
+                                        ? 'linear-gradient(135deg, rgba(217, 119, 6, 0.15), rgba(234, 88, 12, 0.15))'
+                                        : 'rgba(51, 65, 85, 0.4)',
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    border: signal.isPremium 
+                                        ? '1px solid rgba(217, 119, 6, 0.3)'
+                                        : '1px solid rgba(71, 85, 105, 0.3)'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'flex-start',
+                                        marginBottom: '8px'
+                                    }}>
+                                        <div>
+                                            <h3 style={{margin: '0 0 3px 0', fontSize: '15px', fontWeight: 'bold'}}>
+                                                {signal.pair}
+                                            </h3>
+                                            <p style={{margin: '0', fontSize: '11px', color: '#9CA3AF'}}>
+                                                {tradingStrategies[signal.strategy]?.name}
+                                            </p>
+                                        </div>
+                                        <div style={{textAlign: 'center'}}>
+                                            <div style={{
+                                                padding: '3px 6px',
+                                                borderRadius: '4px',
+                                                fontSize: '11px',
+                                                fontWeight: 'bold',
+                                                background: signal.signal === 'LONG' ? '#059669' : '#DC2626',
+                                                marginBottom: '3px'
+                                            }}>
+                                                {signal.signal}
+                                            </div>
+                                            {signal.isPremium && (
+                                                <div style={{fontSize: '10px', color: '#F59E0B'}}>⭐</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '8px',
+                                        fontSize: '12px',
+                                        marginBottom: '10px'
+                                    }}>
+                                        <div>ورود: <span style={{color: 'white', fontWeight: 'bold'}}>${signal.entry.toFixed(2)}</span></div>
+                                        <div>هدف: <span style={{color: '#10B981', fontWeight: 'bold'}}>${signal.target.toFixed(2)}</span></div>
+                                        <div>استاپ: <span style={{color: '#EF4444', fontWeight: 'bold'}}>${signal.stopLoss.toFixed(2)}</span></div>
+                                        <div>اعتماد: <span style={{color: '#3B82F6', fontWeight: 'bold'}}>{signal.confidence}%</span></div>
+                                    </div>
+                                    
+                                    <button
+                                        onClick={() => executePosition(signal)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px',
+                                            borderRadius: '6px',
+                                            border: 'none',
+                                            background: signal.isPremium 
+                                                ? 'linear-gradient(45deg, #D97706, #EA580C)'
+                                                : '#7C3AED',
+                                            color: 'white',
+                                            fontSize: '13px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        🚀 اجرای پوزیشن
+                                    </button>
+                                </div>
+                            ))}
+                            
+                            {userType === 'free' && signals.length < 2 && (
+                                <div style={{
+                                    background: 'rgba(51, 65, 85, 0.3)',
+                                    borderRadius: '8px',
+                                    padding: '20px',
+                                    textAlign: 'center',
+                                    border: '1px dashed rgba(71, 85, 105, 0.5)'
+                                }}>
+                                    <div style={{fontSize: '24px', marginBottom: '8px'}}>🔒</div>
+                                    <p style={{fontSize: '12px', color: '#9CA3AF', margin: 0}}>
+                                        برای دسترسی به سیگنال‌های بیشتر،<br/>
+                                        <strong style={{color: '#F59E0B'}}>حساب پریمیوم</strong> تهیه کنید
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* نمودار */}
+                    <div style={{
+                        background: 'rgba(30, 41, 59, 0.6)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '1px solid rgba(71, 85, 105, 0.3)',
+                        marginBottom: '20px'
+                    }}>
+                        <h2 style={{
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            marginBottom: '15px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            📊 نمودار قیمت
+                            {userType === 'premium' && <span style={{fontSize: '12px', color: '#F59E0B'}}>(زنده)</span>}
+                        </h2>
+                        
+                        {marketData.length > 0 && (
+                            <ResponsiveContainer width="100%" height={220}>
+                                <LineChart data={marketData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                    <XAxis dataKey="time" stroke="#9CA3AF" fontSize={10} />
+                                    <YAxis stroke="#9CA3AF" fontSize={10} />
+                                    <Tooltip 
+                                        contentStyle={{
+                                            backgroundColor: '#1F2937',
+                                            border: '1px solid #374151',
+                                            borderRadius: '8px',
+                                            color: '#fff',
+                                            fontSize: '12px'
+                                        }}
+                                    />
+                                    <Line 
+                                        type="monotone"
+                                        dataKey="price"
+                                        stroke={userType === 'premium' ? '#F59E0B' : '#8B5CF6'}
+                                        strokeWidth={userType === 'premium' ? 3 : 2}
+                                        dot={false}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+
+                    {/* پوزیشن فعال */}
+                    {currentTrade && (
+                        <div style={{
+                            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2))',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            border: '1px solid rgba(139, 92, 246, 0.4)',
+                            marginBottom: '20px'
+                        }}>
+                            <h2 style={{
+                                fontSize: '16px',
+                                fontWeight: 'bold',
+                                marginBottom: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                💰 پوزیشن فعال
+                            </h2>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                                gap: '8px',
+                                fontSize: '13px'
+                            }}>
+                                <div>جفت ارز: <span style={{fontWeight: 'bold'}}>{currentTrade.pair}</span></div>
+                                <div>نوع: <span style={{
+                                    color: currentTrade.signal === 'LONG' ? '#10B981' : '#EF4444',
+                                    fontWeight: 'bold'
+                                }}>{currentTrade.signal}</span></div>
+                                <div>ورود: <span style={{color: 'white', fontWeight: 'bold'}}>${currentTrade.entry.toFixed(2)}</span></div>
+                                <div>استراتژی: <span style={{color: '#A78BFA', fontWeight: 'bold'}}>
+                                    {tradingStrategies[currentTrade.strategy]?.name}
+                                </span></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* فوتر */}
+                    <div style={{
+                        marginTop: '25px',
+                        textAlign: 'center',
+                        fontSize: '11px',
+                        color: '#6B7280',
+                        padding: '15px',
+                        background: 'rgba(0,0,0,0.2)',
+                        borderRadius: '8px'
+                    }}>
+                        <p style={{margin: '0 0 5px 0'}}>🤖 <strong>ربات تریدر Inner Circle</strong></p>
+                        <p style={{margin: '0'}}>
+                            {userType === 'premium' ? '👑 حساب پریمیوم فعال' : '🆓 حساب رایگان فعال'} | 
+                            نسخه وب v1.0
+                        </p>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<TradingBot />, document.getElementById('root'));
+    </script>
+</body>
+</html>
